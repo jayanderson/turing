@@ -1,0 +1,13 @@
+[package]
+
+name = "timer"
+version = "0.1.0"
+authors = ["Jay Anderson"]
+
+[[bin]]
+
+name = "turing"
+
+[dependencies.timer]
+
+path = "../timer"
