@@ -1,8 +1,8 @@
 extern crate rand; 
-//use std::vec::Vec;
-use rand::Rng;
 
-#[deriving(Eq,Ord,Show)]
+use std::rand::Rng;
+
+#[deriving(PartialEq,Eq,PartialOrd,Ord,Show)]
 enum Direction {
   STAY,
   NORTH,
@@ -11,20 +11,6 @@ enum Direction {
   WEST,
   // TODO: consider diagonal moves
 }
-
-/*
-impl ToStr for Direction {
-  fn to_str(&self) -> ~str {
-    match *self {
-      STAY => ~"STAY",
-      NORTH => ~"NORTH",
-      EAST => ~"EAST",
-      SOUTH => ~"SOUTH",
-      WEST => ~"WEST",
-    }
-  }
-}
-*/
 
 impl Direction {
   fn from_u8(val: u8) -> Direction {
@@ -62,8 +48,8 @@ struct TuringMachine {
 }
 
 impl TuringMachine {
-  pub fn new(width: u16, height: u16, states: u8, symbols: u8) -> ~TuringMachine {
-    ~TuringMachine {
+  pub fn new(width: u16, height: u16, states: u8, symbols: u8) -> Box<TuringMachine> {
+    box TuringMachine {
       width: width,
       height: height,
       states: states,
@@ -76,7 +62,7 @@ impl TuringMachine {
   }
 
   fn random_table(states: u8, symbols: u8) -> Vec<(u8, u8, Direction)> {
-    let mut rng = rand::task_rng();
+    let mut rng = std::rand::task_rng();
     Vec::from_fn((states*symbols) as uint, |_| {
       (rng.gen_range(0u8, states), rng.gen_range(0u8, symbols), Direction::from_u8(rng.gen_range(0u8, 4u8)+1))
     })
@@ -118,7 +104,7 @@ impl TuringMachine {
     return ret;
   }
 
-  fn write_image<W: Writer>(&self, out: &mut W) {
+  fn write_image<W: Writer>(&self, out: &mut Box<W>) {
     let palette = [
       [0u8,0u8,0u8], // black
       [255u8,255u8,255u8], // white
@@ -129,40 +115,33 @@ impl TuringMachine {
       [0u8,255u8,0u8], // green
     ];
     let len = (self.width as uint) * (self.height as uint) * 3;
-    let mut image = Vec::from_elem(len, 0u8);
-    let mut i = 0;
+
+    let mut image = Vec::with_capacity(len);
     for &val in self.tape.iter() {
       let color = palette[val as uint];
-      *image.get_mut(i) = color[0];
-      *image.get_mut((i+1) as uint) = color[1];
-      *image.get_mut((i+2) as uint) = color[2];
-      i += 3;
+      image.push(color[0]);
+      image.push(color[1]);
+      image.push(color[2]);
     }
-    out.write(image.slice(0,len));
+    out.write(image.as_slice());
     out.flush();
   }
 }
 
-fn print_err(msg: &str) { //-> Result<(),std::io::IoError> {
-  let mut err = ~std::io::stderr();
-  err.write(msg.as_bytes());
-}
 
-
-// ffmpeg random input: ffmpeg -y -f rawvideo -s 420x360 -pix_fmt rgb24 -r 24 -i /dev/urandom -an -vcodec mpeg4 random.mp4
-// ffmpeg stdin: ffmpeg -y -f rawvideo -s 512x512 -pix_fmt rgb24 -r 24 -i - -an -vcodec mpeg4 out.mp4
-// time ./turing | ffmpeg -y -f rawvideo -s 512x512 -pix_fmt rgb24 -i - -an -f mpeg2video - | vlc -
 fn main() {
   let states = 4u8;
-  let symbols = 3u8;
-  let width = 1024u16;
-  let height = 768u16;
+  let symbols = 6u8;
+  //let width = 1024u16;
+  //let height = 768u16;
+  let width = 512u16;
+  let height = 512u16;
   let mut machine = TuringMachine::new(width, height, states, symbols);
   let len = (machine.width as uint) * (machine.height as uint);
-  let mut out = ~std::io::stdout();
+  let mut out = box std::io::stdout();
 
   // Reset the pattern after this step count
-  let count = 2500000;
+  let count = 2500000u32;
   // print the picture after this step count
   let stops = 10000;
 
@@ -172,20 +151,17 @@ fn main() {
     change = machine.step() || change;
     i += 1;
     if i % stops == 0 {
-      machine.write_image(out);
+      machine.write_image(&mut out);
       if !change {
-        print_err("new machine: bad\n");
         // new machine
         machine.table = TuringMachine::random_table(machine.states, machine.symbols);
         machine.tape = Vec::from_elem(len, 0u8);
         i = 0;
       } else {
-        //print_err("good\n");
         change = true;
       }
     }
     if i >= count {
-      print_err("new machine: bad\n");
       // new machine
       machine.table = TuringMachine::random_table(machine.states, machine.symbols);
       machine.tape = Vec::from_elem(len, 0u8);

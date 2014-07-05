@@ -1,13 +1,11 @@
 [package]
-
 name = "timer"
 version = "0.1.0"
 authors = ["Jay Anderson"]
 
 [[bin]]
-
 name = "turing"
 
-[dependencies.timer]
-
-path = "../timer"
+#Cargo doesn't ready for local git repos yet.
+#[dependencies.timer]
+#git = "file:///home/jay/programming/languages/rust/timer"
