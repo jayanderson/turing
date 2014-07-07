@@ -202,7 +202,7 @@ fn main() {
   let stops: u32 = get(&config, "turing.picture_steps") as u32;
 
   // These correspond to the symbols. Having more symbols than colors will
-  // result in an error.
+  // result in an error. TODO: Consider randomized colors.
   let palette: Vec<Color> = vec!( 
     BLACK,
     WHITE,
