@@ -10,6 +10,10 @@ enum Direction {
   SOUTH,
   WEST,
   // TODO: consider diagonal moves
+  //NORTHEAST,
+  //NORTHWEST,
+  //SOUTHEAST,
+  //SOUTHWEST,
 }
 
 impl Direction {
@@ -20,15 +24,30 @@ impl Direction {
       2 => EAST,
       3 => SOUTH,
       4 => WEST,
+
+      //5 => NORTHEAST,
+      //6 => NORTHWEST,
+      //7 => SOUTHEAST,
+      //8 => SOUTHWEST,
       _ => fail!("out of range"),
     }
   }
 }
 
+// Colors
+type Color = [u8, .. 3];
+static BLACK: Color = [0,0,0];
+static WHITE: Color = [255,255,255];
+static LIGHT_GRAY: Color = [170,170,170];
+static GRAY: Color = [85,85,85];
+static RED: Color = [255,0,0];
+static BLUE: Color = [0,0,255];
+static GREEN: Color = [0,255,0];
+
 
 /// A finite 2D turing machine definition.
 /// - The 'tape' has a size of 'width'*'height'.
-/// - There is a current position within the tape.
+/// - There is a current 'position' within the tape.
 /// - There are 'states' possible states for the machine.
 /// - There are 'symbols' possible symbols at each position.
 /// - The table defines transitions. It is a 2D table. Given the current state
@@ -45,6 +64,9 @@ struct TuringMachine {
   // transition [curr_state, read_symbol] -> [next_state, write_symbol, move_direction]
   table: Vec<(u8, u8, Direction)>,
   tape: Vec<u8>,
+
+  // Memory for writing raw image into. Optimization.
+  image: Vec<u8>,
 }
 
 impl TuringMachine {
@@ -58,6 +80,7 @@ impl TuringMachine {
       state: 0,
       table: TuringMachine::random_table(states, symbols),
       tape: Vec::from_elem((width as uint) * (height as uint), 0u8),
+      image: Vec::from_elem((width as uint) * (height as uint) * 3, 0u8),
     }
   }
 
@@ -104,18 +127,20 @@ impl TuringMachine {
     return ret;
   }
 
-  fn write_image<W: Writer>(&self, out: &mut Box<W>) {
-    let palette = [
-      [0u8,0u8,0u8], // black
-      [255u8,255u8,255u8], // white
-      [170u8,170u8,170u8], // light gray
-      [85u8,85u8,85u8], // dark gray
-      [255u8,0u8,0u8], // red
-      [0u8,0u8,255u8], // blue
-      [0u8,255u8,0u8], // green
-    ];
-    let len = (self.width as uint) * (self.height as uint) * 3;
+  fn write_image<W: Writer>(&mut self, palette: &Vec<Color>, out: &mut Box<W>) -> std::io::IoResult<()> {
+    // Direct to stdout. Slow.
+    /*
+    for &val in self.tape.iter() {
+      let color = palette[val as uint];
+      try!(out.write_u8(color[0]));
+      try!(out.write_u8(color[1]));
+      try!(out.write_u8(color[2]));
+    }
+    */
 
+    // Alternative seems quicker, but still not fast enough:
+    /*
+    let len = (self.width as uint) * (self.height as uint) * 3;
     let mut image = Vec::with_capacity(len);
     for &val in self.tape.iter() {
       let color = palette[val as uint];
@@ -123,13 +148,28 @@ impl TuringMachine {
       image.push(color[1]);
       image.push(color[2]);
     }
-    out.write(image.as_slice());
-    out.flush();
+    try!(out.write(image.as_slice()));
+    */
+
+    // Upfront allocation. Faster, but still not fast enough at higher resolutions.
+    // Requires adding 'image: Vec<u8>' on the struct.
+    let mut i = 0;
+    for &val in self.tape.iter() {
+      let color = palette.get(val as uint);
+      *self.image.get_mut(i) = color[0];
+      *self.image.get_mut(i+1u) = color[1];
+      *self.image.get_mut(i+2u) = color[2];
+      i += 3;
+    }
+    try!(out.write(self.image.as_slice()))
+    try!(out.flush());
+    Ok(())
   }
 }
 
 
 fn main() {
+  // TODO: Move some of these parameters to a configuration file.
   let states = 4u8;
   let symbols = 6u8;
   //let width = 1024u16;
@@ -139,6 +179,17 @@ fn main() {
   let mut machine = TuringMachine::new(width, height, states, symbols);
   let len = (machine.width as uint) * (machine.height as uint);
   let mut out = box std::io::stdout();
+
+  let palette: Vec<Color> = vec!( 
+    BLACK,
+    WHITE,
+    RED,
+    BLUE,
+    GREEN,
+    LIGHT_GRAY,
+    GRAY,
+  );
+
 
   // Reset the pattern after this step count
   let count = 2500000u32;
@@ -151,7 +202,9 @@ fn main() {
     change = machine.step() || change;
     i += 1;
     if i % stops == 0 {
-      machine.write_image(&mut out);
+      if machine.write_image(&palette, &mut out).is_err() {
+        fail!("Error writing to stdout");
+      }
       if !change {
         // new machine
         machine.table = TuringMachine::random_table(machine.states, machine.symbols);
