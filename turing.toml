@@ -1,0 +1,8 @@
+[turing]
+states = 4
+symbols = 6
+width = 512
+height = 512
+
+picture_steps = 10000
+reset_steps = 2500000

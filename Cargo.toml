@@ -9,3 +9,6 @@ name = "turing"
 #Cargo doesn't ready for local git repos yet.
 #[dependencies.timer]
 #git = "file:///home/jay/programming/languages/rust/timer"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs.git"

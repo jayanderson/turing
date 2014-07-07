@@ -1,4 +1,5 @@
 extern crate rand; 
+extern crate toml;
 
 use std::rand::Rng;
 
@@ -168,18 +169,40 @@ impl TuringMachine {
 }
 
 
+fn load_config() -> toml::Value {
+  let path = Path::new("turing.toml");
+  let mut file = std::io::File::open(&path);
+  let data = match file.read_to_str() {
+    Err(why) => fail!("Unable to read config file: {}", why.desc),
+    Ok(str) => str,
+  };
+  from_str(data.as_slice()).unwrap()
+}
+
+
+fn get(config: &toml::Value, name: &str) -> i64 {
+  config.lookup(name).unwrap().as_integer().unwrap()
+}
+
+
 fn main() {
-  // TODO: Move some of these parameters to a configuration file.
-  let states = 4u8;
-  let symbols = 6u8;
-  //let width = 1024u16;
-  //let height = 768u16;
-  let width = 512u16;
-  let height = 512u16;
+  let config = load_config();
+  println!("{}", config);
+  let states: u8 = get(&config, "turing.states") as u8;
+  let symbols: u8 = get(&config, "turing.symbols") as u8;
+  let width: u16 = get(&config, "turing.width") as u16;
+  let height: u16 = get(&config, "turing.height") as u16;
   let mut machine = TuringMachine::new(width, height, states, symbols);
   let len = (machine.width as uint) * (machine.height as uint);
   let mut out = box std::io::stdout();
 
+  // Reset the pattern after this step count
+  let count: u32 = get(&config, "turing.reset_steps") as u32;
+  // print the picture after this step count
+  let stops: u32 = get(&config, "turing.picture_steps") as u32;
+
+  // These correspond to the symbols. Having more symbols than colors will
+  // result in an error.
   let palette: Vec<Color> = vec!( 
     BLACK,
     WHITE,
@@ -189,12 +212,6 @@ fn main() {
     LIGHT_GRAY,
     GRAY,
   );
-
-
-  // Reset the pattern after this step count
-  let count = 2500000u32;
-  // print the picture after this step count
-  let stops = 10000;
 
   let mut i = 0;
   let mut change = false;
