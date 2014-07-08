@@ -3,37 +3,21 @@ extern crate toml;
 
 use std::rand::Rng;
 
-#[deriving(PartialEq,Eq,PartialOrd,Ord,Show)]
+#[deriving(PartialEq,Eq,PartialOrd,Ord,Show,Rand)]
 enum Direction {
-  STAY,
   NORTH,
   EAST,
   SOUTH,
   WEST,
-  // TODO: consider diagonal moves
+
+  // TODO: consider other directions:
+  //STAY,
   //NORTHEAST,
   //NORTHWEST,
   //SOUTHEAST,
   //SOUTHWEST,
 }
 
-impl Direction {
-  fn from_u8(val: u8) -> Direction {
-    match val {
-      0 => STAY,
-      1 => NORTH,
-      2 => EAST,
-      3 => SOUTH,
-      4 => WEST,
-
-      //5 => NORTHEAST,
-      //6 => NORTHWEST,
-      //7 => SOUTHEAST,
-      //8 => SOUTHWEST,
-      _ => fail!("out of range"),
-    }
-  }
-}
 
 // Colors defined as arrays of [R,G,B].
 type Color = [u8, .. 3];
@@ -91,7 +75,7 @@ impl TuringMachine {
   fn random_table(states: u8, symbols: u8) -> Vec<(u8, u8, Direction)> {
     let mut rng = std::rand::task_rng();
     Vec::from_fn((states*symbols) as uint, |_| {
-      (rng.gen_range(0u8, states), rng.gen_range(0u8, symbols), Direction::from_u8(rng.gen_range(0u8, 4u8)+1))
+      (rng.gen_range(0u8, states), rng.gen_range(0u8, symbols), rng.gen::<Direction>())
     })
   }
 
@@ -109,7 +93,6 @@ impl TuringMachine {
     let mut x: i32 = (self.position as i32) % (self.width as i32);
     let mut y: i32 = (self.position as i32) / (self.width as i32);
     match move_direction {
-      STAY => { },
       NORTH => {
         y -= 1;
         if y < 0 { y = (self.height as i32)-1; }
@@ -128,6 +111,7 @@ impl TuringMachine {
       },
     }
     self.position = (y*(self.width as i32) + x) as u32;
+
     return ret;
   }
 
