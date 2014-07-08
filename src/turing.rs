@@ -42,8 +42,11 @@ static WHITE: Color = [255,255,255];
 static LIGHT_GRAY: Color = [170,170,170];
 static GRAY: Color = [85,85,85];
 static RED: Color = [255,0,0];
-static BLUE: Color = [0,0,255];
 static GREEN: Color = [0,255,0];
+static BLUE: Color = [0,0,255];
+static CYAN: Color = [0,255,255];
+static MAGENTA: Color = [255,0,255];
+static YELLOW: Color = [255,255,0];
 
 
 /// A finite 2D turing machine definition.
@@ -182,6 +185,32 @@ fn load_config() -> toml::Value {
 }
 
 
+// These colors correspond to the symbols. Having more symbols than colors will
+// result in an error.
+fn load_palette(config: &toml::Value) -> Vec<Color> {
+  // TODO: Consider randomized colors, palette from config, or some way of
+  // ensuring enough colors.
+  let palette = vec!( 
+    BLACK,
+    RED,
+    GREEN,
+    BLUE,
+    WHITE,
+    CYAN,
+    MAGENTA,
+    YELLOW,
+    LIGHT_GRAY,
+    GRAY,
+  );
+
+  if palette.len() < get(config, "turing.symbols") as uint {
+    fail!("Too many symbols for possible colors. Fix the code.");
+  }
+
+  palette
+}
+
+
 fn get(config: &toml::Value, name: &str) -> i64 {
   config.lookup(name).unwrap().as_integer().unwrap()
 }
@@ -202,17 +231,7 @@ fn main() {
   // print the picture after this step count
   let stops: u32 = get(&config, "turing.picture_steps") as u32;
 
-  // These correspond to the symbols. Having more symbols than colors will
-  // result in an error. Consider randomized colors.
-  let palette: Vec<Color> = vec!( 
-    RED,
-    WHITE,
-    BLUE,
-    BLACK,
-    GREEN,
-    LIGHT_GRAY,
-    GRAY,
-  );
+  let palette: Vec<Color> = load_palette(&config);
 
   let mut i = 0;
   let mut change = false;
