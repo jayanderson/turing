@@ -4,5 +4,8 @@ symbols = 6
 width = 512
 height = 512
 
+# The number of steps between generating one frame.
 picture_steps = 10000
+
+# The number of steps between restarting with a new randomized turing machine.
 reset_steps = 2500000
