@@ -43,11 +43,11 @@ static YELLOW: Color = [255,255,0];
 ///   the direction to move.
 #[deriving(Show)]
 struct TuringMachine {
-  width: u16,
-  height: u16,
+  width: uint,
+  height: uint,
   states: u8,
   symbols: u8,
-  position: u32,
+  position: uint,
   state: u8,
   // transition [curr_state, read_symbol] -> [next_state, write_symbol, move_direction]
   table: Vec<(u8, u8, Direction)>,
@@ -58,7 +58,7 @@ struct TuringMachine {
 }
 
 impl TuringMachine {
-  pub fn new(width: u16, height: u16, states: u8, symbols: u8) -> Box<TuringMachine> {
+  pub fn new(width: uint, height: uint, states: u8, symbols: u8) -> Box<TuringMachine> {
     box TuringMachine {
       width: width,
       height: height,
@@ -67,8 +67,8 @@ impl TuringMachine {
       position: 0,
       state: 0,
       table: TuringMachine::random_table(states, symbols),
-      tape: Vec::from_elem((width as uint) * (height as uint), 0u8),
-      image: Vec::from_elem((width as uint) * (height as uint) * 3, 0u8),
+      tape: Vec::from_elem(width * height, 0u8),
+      image: Vec::from_elem(width * height * 3, 0u8),
     }
   }
 
@@ -81,36 +81,34 @@ impl TuringMachine {
 
   // Return true if this step changed a pixel.
   fn step(&mut self) -> bool {
-    let curr_symbol = *self.tape.get(self.position as uint);
+    let curr_symbol = *self.tape.get(self.position);
     let (next_state, write_symbol, move_direction) =
       *self.table.get((self.states*curr_symbol + self.state) as uint);
-    *self.tape.get_mut(self.position as uint) = write_symbol;
+    *self.tape.get_mut(self.position) = write_symbol;
 
     // Return whether this changes the picture or not.
     let ret = write_symbol != curr_symbol;
 
     self.state = next_state;
-    let mut x: i32 = (self.position as i32) % (self.width as i32);
-    let mut y: i32 = (self.position as i32) / (self.width as i32);
+    let mut x: uint = self.position % self.width;
+    let mut y: uint = self.position / self.width;
     match move_direction {
       NORTH => {
-        y -= 1;
-        if y < 0 { y = (self.height as i32)-1; }
+        y = if y == 0 { self.height-1 } else { y-1 };
       },
       EAST => {
         x += 1;
-        if x >= (self.width as i32) { x = 0; }
+        if x >= self.width { x = 0; }
       },
       SOUTH => {
         y += 1;
-        if y >= (self.height as i32) { y = 0; }
+        if y >= self.height { y = 0; }
       },
       WEST => {
-        x -= 1;
-        if x < 0 { x = (self.width as i32)-1; }
+        x = if x == 0 { self.width-1 } else { x-1 };
       },
     }
-    self.position = (y*(self.width as i32) + x) as u32;
+    self.position = y*self.width + x;
 
     return ret;
   }
@@ -204,10 +202,10 @@ fn main() {
   let config = load_config();
   let states: u8 = get(&config, "turing.states") as u8;
   let symbols: u8 = get(&config, "turing.symbols") as u8;
-  let width: u16 = get(&config, "turing.width") as u16;
-  let height: u16 = get(&config, "turing.height") as u16;
+  let width: uint = get(&config, "turing.width") as uint;
+  let height: uint = get(&config, "turing.height") as uint;
   let mut machine = TuringMachine::new(width, height, states, symbols);
-  let len = (machine.width as uint) * (machine.height as uint);
+  let len = machine.width * machine.height;
   let mut out = box std::io::stdout();
 
   // Reset the pattern after this step count
