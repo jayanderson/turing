@@ -35,7 +35,7 @@ impl Direction {
   }
 }
 
-// Colors
+// Colors defined as arrays of [R,G,B].
 type Color = [u8, .. 3];
 static BLACK: Color = [0,0,0];
 static WHITE: Color = [255,255,255];
@@ -128,11 +128,12 @@ impl TuringMachine {
     return ret;
   }
 
+  /// Writes the current state as an image (bgr24 since that's what vlc seems to expect).
   fn write_image<W: Writer>(&mut self, palette: &Vec<Color>, out: &mut Box<W>) -> std::io::IoResult<()> {
     // Direct to stdout. Slow.
     /*
     for &val in self.tape.iter() {
-      let color = palette[val as uint];
+      let color = palette.get(val as uint);
       try!(out.write_u8(color[0]));
       try!(out.write_u8(color[1]));
       try!(out.write_u8(color[2]));
@@ -144,7 +145,7 @@ impl TuringMachine {
     let len = (self.width as uint) * (self.height as uint) * 3;
     let mut image = Vec::with_capacity(len);
     for &val in self.tape.iter() {
-      let color = palette[val as uint];
+      let color = palette.get(val as uint);
       image.push(color[0]);
       image.push(color[1]);
       image.push(color[2]);
@@ -157,12 +158,13 @@ impl TuringMachine {
     let mut i = 0;
     for &val in self.tape.iter() {
       let color = palette.get(val as uint);
-      *self.image.get_mut(i) = color[0];
+      *self.image.get_mut(i+2u) = color[0];
       *self.image.get_mut(i+1u) = color[1];
-      *self.image.get_mut(i+2u) = color[2];
+      *self.image.get_mut(i+0u) = color[2];
       i += 3;
     }
     try!(out.write(self.image.as_slice()))
+
     try!(out.flush());
     Ok(())
   }
@@ -187,7 +189,6 @@ fn get(config: &toml::Value, name: &str) -> i64 {
 
 fn main() {
   let config = load_config();
-  println!("{}", config);
   let states: u8 = get(&config, "turing.states") as u8;
   let symbols: u8 = get(&config, "turing.symbols") as u8;
   let width: u16 = get(&config, "turing.width") as u16;
@@ -202,12 +203,12 @@ fn main() {
   let stops: u32 = get(&config, "turing.picture_steps") as u32;
 
   // These correspond to the symbols. Having more symbols than colors will
-  // result in an error. TODO: Consider randomized colors.
+  // result in an error. Consider randomized colors.
   let palette: Vec<Color> = vec!( 
-    BLACK,
-    WHITE,
     RED,
+    WHITE,
     BLUE,
+    BLACK,
     GREEN,
     LIGHT_GRAY,
     GRAY,
