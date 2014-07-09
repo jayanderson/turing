@@ -1,6 +1,8 @@
 [turing]
 states = 4
 symbols = 6
+#width = 1024
+#height = 768
 width = 512
 height = 512
 

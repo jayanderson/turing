@@ -2,6 +2,7 @@ extern crate rand;
 extern crate toml;
 
 use std::rand::Rng;
+use std::rand::distributions::{Range, IndependentSample};
 
 #[deriving(PartialEq,Eq,PartialOrd,Ord,Show,Rand)]
 enum Direction {
@@ -74,8 +75,10 @@ impl TuringMachine {
 
   fn random_table(states: u8, symbols: u8) -> Vec<(u8, u8, Direction)> {
     let mut rng = std::rand::task_rng();
+    let state_range = Range::new(0, states);
+    let symbol_range = Range::new(0, symbols);
     Vec::from_fn((states*symbols) as uint, |_| {
-      (rng.gen_range(0u8, states), rng.gen_range(0u8, symbols), rng.gen::<Direction>())
+      (state_range.ind_sample(&mut rng), symbol_range.ind_sample(&mut rng), rng.gen::<Direction>())
     })
   }
 
@@ -142,10 +145,10 @@ impl TuringMachine {
     // Requires adding 'image: Vec<u8>' on the struct.
     let mut i = 0;
     for &val in self.tape.iter() {
-      let color = palette.get(val as uint);
-      *self.image.get_mut(i+2u) = color[0];
-      *self.image.get_mut(i+1u) = color[1];
-      *self.image.get_mut(i+0u) = color[2];
+      let [r, g, b] = *palette.get(val as uint);
+      *self.image.get_mut(i+2u) = r;
+      *self.image.get_mut(i+1u) = g;
+      *self.image.get_mut(i+0u) = b;
       i += 3;
     }
     try!(out.write(self.image.as_slice()))
