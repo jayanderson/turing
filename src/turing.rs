@@ -3,6 +3,7 @@ extern crate toml;
 
 use std::rand::Rng;
 use std::rand::distributions::{Range, IndependentSample};
+use std::iter::count;
 
 #[deriving(PartialEq,Eq,PartialOrd,Ord,Show,Rand)]
 enum Direction {
@@ -143,13 +144,11 @@ impl TuringMachine {
 
     // Upfront allocation. Faster, but still not fast enough at higher resolutions.
     // Requires adding 'image: Vec<u8>' on the struct.
-    let mut i = 0;
-    for &val in self.tape.iter() {
+    for (&val, x) in self.tape.iter().zip(count(0u,3)) {
       let [r, g, b] = *palette.get(val as uint);
-      *self.image.get_mut(i+2u) = r;
-      *self.image.get_mut(i+1u) = g;
-      *self.image.get_mut(i+0u) = b;
-      i += 3;
+      *self.image.get_mut(x+2) = r;
+      *self.image.get_mut(x+1) = g;
+      *self.image.get_mut(x+0) = b;
     }
     try!(out.write(self.image.as_slice()))
 
